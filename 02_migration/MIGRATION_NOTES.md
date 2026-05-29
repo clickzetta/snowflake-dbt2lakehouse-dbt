@@ -65,8 +65,9 @@
 | Snowflake | ClickZetta |
 |---|---|
 | `get_stream(ref('dim_customers'))` macro | `get_table_stream(ref('dim_customers'))` macro |
-| `metadata$action = 'DELETE'` | `__change_type = 'DELETE'` |
-| `metadata$isupdate` | `__change_type = 'UPDATE_BEFORE'` |
+| `metadata$action = 'DELETE'` | `` `__change_type` = 'DELETE' `` (backtick required) |
+| `metadata$isupdate` | `` `__change_type` = 'UPDATE_BEFORE' `` |
+| `SELECT *` from stream | `SELECT * EXCEPT(__change_type, __commit_timestamp, __commit_version)` — requires dbt-clickzetta >= 1.6.5 |
 
 ### models/gold/dim_calendar_day.sql
 | Snowflake | ClickZetta |
@@ -95,6 +96,7 @@ These issues were discovered during actual `dbt build` against ClickZetta (not v
 | `__change_type` as column alias | Allowed | Reserved name — error | Use `cdc_change_type` as alias; backtick-quote when reading from stream |
 | `TABLE_STREAM_MODE = 'ALL'` | Not applicable | Not supported | Use `'STANDARD'` or `'APPEND_ONLY'` |
 | `this.database` in macros | Returns database name | **Fixed in dbt-clickzetta 1.6.3** — now returns workspace name. `{{ this }}` renders correctly as `schema.table`. |
+| Stream system columns in `get_columns_in_relation` | N/A | **Fixed in dbt-clickzetta 1.6.5** — `get_columns_in_relation()` returns `[]` for stream relations; `__` prefixed columns filtered in `parse_describe_extended`. `SELECT * EXCEPT(...)` now works cleanly. |
 | `table(generator(rowcount=>N))` | Row generator | Not supported | Use `explode(sequence(0, N-1))` |
 | Recursive CTE (`WITH RECURSIVE`) | Supported | Not supported | Use `explode(sequence(...))` |
 | SF100 duplicate primary keys | CUSTOMER has unique C_CUSTKEY | tpch_100g SF100 has duplicate C_CUSTKEY | Add `qualify row_number() over (partition by customer_key ...) = 1` dedup |

@@ -90,7 +90,7 @@ These issues were discovered during actual `dbt build` against ClickZetta (not v
 
 | Issue | Snowflake behavior | ClickZetta behavior | Fix |
 |---|---|---|---|
-| `float8` type in seeds | Supported | Not supported | Use `decimal(18,6)` in seed column_types |
+| `float8` type in seeds | Supported | **Fixed in dbt-clickzetta 1.6.2** — `float8` now maps to `double` automatically. Explicit `column_types` still recommended for performance (avoids type inference overhead). |
 | `hash()` function | Built-in multi-column hash | Not supported | `hash_combine(crc32(col1), crc32(col2), ...)` — `hash_combine_commutative` requires bigint args, use `crc32()` to convert varchar first |
 | `__change_type` as column alias | Allowed | Reserved name — error | Use `cdc_change_type` as alias; backtick-quote when reading from stream |
 | `TABLE_STREAM_MODE = 'ALL'` | Not applicable | Not supported | Use `'STANDARD'` or `'APPEND_ONLY'` |

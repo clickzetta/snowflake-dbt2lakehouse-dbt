@@ -2,6 +2,7 @@ version: 2
 
 seeds:
   - name: fx_rates_timeseries
+    description: "Mock FX rates — USD base, daily 2020-2024, 5 currencies (EUR/CNY/JPY/GBP/CAD)"
     config:
       column_types:
         rate_date: date

@@ -1,0 +1,10 @@
+version: 2
+
+seeds:
+  - name: fx_rates_timeseries
+    config:
+      column_types:
+        rate_date: date
+        base_currency: string
+        quote_currency: string
+        exchange_rate: decimal(18, 6)

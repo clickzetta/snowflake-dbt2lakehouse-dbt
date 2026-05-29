@@ -1,45 +1,47 @@
 {{ config(
     materialized='incremental',
+    incremental_strategy='merge',
     unique_key='order_key',
     tags=['gold', 'run'],
     alias='DIM_ORDERS'
 ) }}
 
+-- Migration note:
+--   Source changed from stg_tpc_h__orders (full SF100, 1B+ rows) to stg_orders_incremental
+--   to keep build time reasonable. stg_orders_incremental uses prune_days var (default 2 days).
+--   dim_customers dedup added: qualify row_number() to avoid fan-out on join.
+
 with orders_base as (
-    select * from {{ ref('stg_tpc_h__orders') }}
+    select * from {{ ref('stg_orders_incremental') }}
 ),
 
 customers as (
     select customer_key, customer_name, nation_key
     from {{ ref('dim_customers') }}
+    qualify row_number() over (partition by customer_key order by dbt_updated_ts desc) = 1
 ),
 
 enriched_orders as (
     select
-        o.order_key,
-        o.customer_key,
-        o.order_status,
-        o.total_price,
-        o.order_date,
-        o.order_priority,
-        o.clerk,
-        o.ship_priority,
-        o.order_comment,
+        o.o_orderkey                                    as order_key,
+        o.o_custkey                                     as customer_key,
+        o.o_orderstatus                                 as order_status,
+        o.o_totalprice                                  as total_price,
+        o.o_orderdate                                   as order_date,
+        o.o_orderpriority                               as order_priority,
+        o.o_clerk                                       as clerk,
+        o.o_shippriority                                as ship_priority,
+        o.o_comment                                     as order_comment,
         c.customer_name,
         c.nation_key,
-        case
-            when o.order_status = 'O' then 'Open'
-            when o.order_status = 'F' then 'Fulfilled'
-            when o.order_status = 'P' then 'Partial'
-            else 'Unknown'
-        end as order_status_desc,
-        extract(year    from o.order_date) as order_year,
-        extract(quarter from o.order_date) as order_quarter,
-        extract(month   from o.order_date) as order_month,
-        o._loaded_at,
-        current_timestamp() as _updated_at
+        o.order_status_desc,
+        o.order_year,
+        o.order_quarter,
+        o.order_month,
+        o.processed_at                                  as _loaded_at,
+        current_timestamp()                             as _updated_at
     from orders_base o
-    left join customers c using (customer_key)
+    left join customers c on o.o_custkey = c.customer_key
 )
 
 select * from enriched_orders

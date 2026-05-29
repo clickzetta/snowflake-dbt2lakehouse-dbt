@@ -4,12 +4,9 @@
 ) }}
 
 -- Migration notes:
---   Snowflake: sequence_get_nextval() macro (CREATE SEQUENCE + .nextval)
---              transient=false, merge_exclude_columns, sysdate(), null::timestamp_ntz
---   ClickZetta: row_number() over (...) as surrogate key (sequences not supported)
---               transient / merge_exclude_columns removed
---               sysdate() → current_timestamp()
---               null::timestamp_ntz → null
+--   Snowflake: sequence_get_nextval() → row_number() over (...)
+--              hash() → md5(concat(...))  (hash() not supported in ClickZetta)
+--              transient=false, merge_exclude_columns, sysdate() → current_timestamp()
 
 {%- set scd_surrogate_key  = "customer_surrogate_key" -%}
 {%- set scd_integration_key = "integration_id" -%}
@@ -19,7 +16,7 @@
 
 {{ config(
     materialized='incremental',
-    unique_key=scd_surrogate_key
+    unique_key=scd_integration_key
 ) }}
 
 with source_data as (
@@ -32,12 +29,16 @@ with source_data as (
         c.market_segment,
         c.customer_comment,
         c.customer_key,
-        coalesce(c.customer_key::varchar, '') as {{ scd_integration_key }},
-        hash(
-            c.customer_name, c.customer_address, c.nation_key,
-            c.customer_phone, c.account_balance, c.market_segment,
-            c.customer_comment
-        ) as {{ scd_cdc_hash_key }},
+        coalesce(cast(c.customer_key as varchar), '') as {{ scd_integration_key }},
+        md5(concat(
+            coalesce(c.customer_name, ''), '|',
+            coalesce(c.customer_address, ''), '|',
+            coalesce(cast(c.nation_key as varchar), ''), '|',
+            coalesce(c.customer_phone, ''), '|',
+            coalesce(cast(c.account_balance as varchar), ''), '|',
+            coalesce(c.market_segment, ''), '|',
+            coalesce(c.customer_comment, '')
+        )) as {{ scd_cdc_hash_key }},
         case when o.order_count > 0      then 'Y' else 'N' end as has_orders_flag,
         case when o.open_order_count > 0 then 'Y' else 'N' end as has_open_orders_flag,
         o.order_count,

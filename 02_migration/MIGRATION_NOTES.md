@@ -27,10 +27,11 @@
 ### models/bronze/run/customer_cdc_stream.sql
 | Snowflake | ClickZetta |
 |---|---|
-| `METADATA$ACTION` | `__change_type` |
-| `METADATA$ISUPDATE` | `__commit_timestamp` |
-| `METADATA$ROW_ID` | `__commit_version` |
-| `post_hook: CREATE STREAM ... SHOW_INITIAL_ROWS = TRUE` | `post_hook: CREATE TABLE STREAM ... TABLE_STREAM_MODE = 'ALL'` |
+| `METADATA$ACTION` | `cdc_change_type` (`__change_type` is a reserved name) |
+| `METADATA$ISUPDATE` | `cdc_commit_ts` (`__commit_timestamp` is reserved) |
+| `METADATA$ROW_ID` | `cdc_version` (`__commit_version` is reserved) |
+| `post_hook: CREATE STREAM ... SHOW_INITIAL_ROWS = TRUE` | `post_hook: CREATE TABLE STREAM ... TABLE_STREAM_MODE = 'STANDARD'` |
+| `TABLE_STREAM_MODE = 'ALL'` | Not supported — use `'STANDARD'` (INSERT/UPDATE/DELETE) or `'APPEND_ONLY'` |
 
 ### models/silver/run/order_facts_dynamic.sql
 | Snowflake | ClickZetta |
@@ -83,7 +84,24 @@
 - Replaces Snowflake's `get_stream()` macro
 - Uses `CREATE TABLE STREAM ... WITH PROPERTIES ('TABLE_STREAM_MODE' = 'ALL')`
 
-## Unsupported Snowflake Features (skipped)
+## Additional Findings from Live Validation
+
+These issues were discovered during actual `dbt build` against ClickZetta (not visible from static code review):
+
+| Issue | Snowflake behavior | ClickZetta behavior | Fix |
+|---|---|---|---|
+| `float8` type in seeds | Supported | Not supported | Use `decimal(18,6)` in seed column_types |
+| `hash()` function | Built-in | Not supported | Replace with `md5(concat(...))` |
+| `__change_type` as column alias | Allowed | Reserved name — error | Use `cdc_change_type` as alias; backtick-quote when reading from stream |
+| `TABLE_STREAM_MODE = 'ALL'` | Not applicable | Not supported | Use `'STANDARD'` or `'APPEND_ONLY'` |
+| `this.database` in macros | Returns database name | Returns `None` | Use `this.schema.identifier` form |
+| `table(generator(rowcount=>N))` | Row generator | Not supported | Use `explode(sequence(0, N-1))` |
+| Recursive CTE (`WITH RECURSIVE`) | Supported | Not supported | Use `explode(sequence(...))` |
+| SF100 duplicate primary keys | CUSTOMER has unique C_CUSTKEY | tpch_100g SF100 has duplicate C_CUSTKEY | Add `qualify row_number() over (partition by customer_key ...) = 1` dedup |
+| `merge_exclude_columns` config | Supported | Not supported | Remove from config |
+| `transient=false` config | Supported | Not supported | Remove from config |
+| `null::timestamp_ntz` | Snowflake type cast | Not supported | Use plain `null` |
+| `sysdate()` | Current timestamp | Not supported | Use `current_timestamp()` |
 
 | Feature | Files | Reason |
 |---|---|---|

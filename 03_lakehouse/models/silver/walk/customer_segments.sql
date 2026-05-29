@@ -3,21 +3,25 @@
     tags=['silver', 'walk', 'business_logic']
 ) }}
 
--- Migration note:
+-- Migration notes:
 --   Snowflake: indexes type 'hash' not supported in ClickZetta — removed.
---   All window functions and CTEs are compatible as-is.
+--   Source ref changed: stg_customers_with_tests → stg_tpc_h__customers
+--   Column names use renamed versions from stg_tpc_h__customers:
+--     c_custkey → customer_key, c_name → customer_name,
+--     c_nationkey → nation_key, c_acctbal → account_balance,
+--     c_mktsegment → market_segment
 
 with customer_metrics as (
     select
-        c_custkey,
-        c_name,
-        c_nationkey,
-        c_acctbal,
-        c_mktsegment,
-        row_number()   over (partition by c_nationkey order by c_acctbal desc) as balance_rank_in_nation,
-        percent_rank() over (order by c_acctbal)                               as balance_percentile,
-        avg(c_acctbal) over (partition by c_nationkey)                         as avg_nation_balance,
-        stddev(c_acctbal) over (partition by c_nationkey)                      as stddev_nation_balance
+        customer_key,
+        customer_name,
+        nation_key,
+        account_balance,
+        market_segment,
+        row_number()   over (partition by nation_key order by account_balance desc) as balance_rank_in_nation,
+        percent_rank() over (order by account_balance)                              as balance_percentile,
+        avg(account_balance) over (partition by nation_key)                         as avg_nation_balance,
+        stddev(account_balance) over (partition by nation_key)                      as stddev_nation_balance
     from {{ ref('stg_tpc_h__customers') }}
 ),
 
@@ -37,25 +41,25 @@ segmented_customers as (
             else 'STANDARD_IN_NATION'
         end as nation_ranking,
         case
-            when c_acctbal > (avg_nation_balance + stddev_nation_balance) then 'ABOVE_AVERAGE'
-            when c_acctbal < (avg_nation_balance - stddev_nation_balance) then 'BELOW_AVERAGE'
+            when account_balance > (avg_nation_balance + stddev_nation_balance) then 'ABOVE_AVERAGE'
+            when account_balance < (avg_nation_balance - stddev_nation_balance) then 'BELOW_AVERAGE'
             else 'AVERAGE'
         end as statistical_class
     from customer_metrics
 )
 
 select
-    c_custkey                                    as customer_key,
-    c_name                                       as customer_name,
-    c_nationkey                                  as nation_key,
-    c_acctbal                                    as account_balance,
-    c_mktsegment                                 as market_segment,
+    customer_key,
+    customer_name,
+    nation_key,
+    account_balance,
+    market_segment,
     customer_segment,
     nation_ranking,
     statistical_class,
     balance_percentile,
     balance_rank_in_nation,
-    round(avg_nation_balance, 2)                 as avg_nation_balance,
-    round(c_acctbal - avg_nation_balance, 2)     as balance_vs_nation_avg,
-    current_timestamp()                          as processed_at
+    round(avg_nation_balance, 2)                     as avg_nation_balance,
+    round(account_balance - avg_nation_balance, 2)   as balance_vs_nation_avg,
+    current_timestamp()                              as processed_at
 from segmented_customers

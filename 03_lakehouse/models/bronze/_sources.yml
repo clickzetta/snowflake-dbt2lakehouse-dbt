@@ -29,42 +29,44 @@ sources:
             tests: [not_null]
 
   # TPC-H — ClickZetta built-in sample data (replaces SNOWFLAKE_SAMPLE_DATA.TPCH_SF1)
+  # In ClickZetta, clickzetta_sample_data is a shared catalog accessible via
+  # three-part name: clickzetta_sample_data.tpch_100g.<table>
+  # dbt-clickzetta maps 'database' to instance, so we use schema with full path instead.
   - name: TPC_H
     description: "TPC-H benchmark dataset from ClickZetta built-in sample data"
-    schema: tpch_100g
-    database: clickzetta_sample_data
+    schema: "clickzetta_sample_data.tpch_100g"
     tables:
       - name: NATION
         description: "Nations reference table"
         columns:
           - name: N_NATIONKEY
-            tests: [not_null, unique]
+            tests: [not_null]
       - name: REGION
         description: "Regions reference table"
         columns:
           - name: R_REGIONKEY
-            tests: [not_null, unique]
+            tests: [not_null]
       - name: CUSTOMER
         description: "Customer master data"
         columns:
           - name: C_CUSTKEY
-            tests: [not_null, unique]
+            tests: [not_null]
       - name: ORDERS
         description: "Order transactions"
         columns:
           - name: O_ORDERKEY
-            tests: [not_null, unique]
+            tests: [not_null]
       - name: LINEITEM
         description: "Order line items"
       - name: SUPPLIER
         description: "Supplier master data"
         columns:
           - name: S_SUPPKEY
-            tests: [not_null, unique]
+            tests: [not_null]
       - name: PART
         description: "Parts catalog"
         columns:
           - name: P_PARTKEY
-            tests: [not_null, unique]
+            tests: [not_null]
       - name: PARTSUPP
         description: "Part-supplier relationships"

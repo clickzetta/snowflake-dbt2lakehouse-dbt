@@ -17,7 +17,10 @@ from pathlib import Path
 
 # ── connection (read from profiles.yml via env or direct) ──────────────────
 PROFILE_DIR = str(Path(__file__).parent / "03_lakehouse")
-DBT_CMD = ["dbt", "--profiles-dir", PROFILE_DIR, "--project-dir", PROFILE_DIR]
+PROJECT_DIR = PROFILE_DIR
+DBT_BIN = str(Path(__file__).parent / ".venv/bin/dbt")
+DBT_ENV = {**os.environ, "DBT_PROFILES_DIR": PROFILE_DIR}
+DBT_CMD = [DBT_BIN]  # run with cwd=PROJECT_DIR
 
 SCHEMA = "dbt_migration_test"
 
@@ -25,7 +28,7 @@ SCHEMA = "dbt_migration_test"
 
 def run(cmd, check=True):
     print(f"\n$ {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=False, text=True)
+    result = subprocess.run(cmd, capture_output=False, text=True, env=DBT_ENV, cwd=PROJECT_DIR)
     if check and result.returncode != 0:
         print(f"[FAIL] command exited {result.returncode}")
         sys.exit(1)
@@ -33,12 +36,14 @@ def run(cmd, check=True):
 
 
 def cz_sql(sql, profile="aliyun_shanghai_prod"):
-    """Run a SQL query via cz-cli and return stdout."""
+    """Run a SQL query via cz-cli and return the first cell value."""
+    import json
     result = subprocess.run(
         ["cz-cli", "sql", sql, "--profile", profile, "--sync"],
         capture_output=True, text=True
     )
-    return result.stdout.strip()
+    data = json.loads(result.stdout.strip())
+    return str(data["rows"][0][0])
 
 
 def check(name, actual, expected, op="=="):

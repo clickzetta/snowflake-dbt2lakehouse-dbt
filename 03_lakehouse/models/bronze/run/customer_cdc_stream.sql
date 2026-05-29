@@ -16,6 +16,7 @@
 --   ClickZetta: __change_type / __commit_timestamp / __commit_version are reserved names
 --               → use cdc_change_type / cdc_commit_ts / cdc_version as aliases
 --
+--   sample (10) → TABLESAMPLE SYSTEM(10) (Snowflake sample syntax not supported)
 --   TABLE_STREAM_MODE: 'ALL' not supported → use 'STANDARD' (captures INSERT/UPDATE/DELETE)
 --   Snowflake post_hook: CREATE STREAM ... SHOW_INITIAL_ROWS = TRUE
 --   ClickZetta post_hook: CREATE TABLE STREAM ... TABLE_STREAM_MODE = 'STANDARD'
@@ -30,5 +31,5 @@ select
 from {{ source('TPC_H', 'CUSTOMER') }}
 
 {% if is_incremental() %}
-    sample (10)
+    TABLESAMPLE SYSTEM(10)
 {% endif %}

@@ -6,7 +6,7 @@
             "{% if not is_incremental() %} drop table stream if exists {{ this.schema }}.{{ this.identifier }}_ts {% endif %}"
         ],
         post_hook=[
-            "create table stream if not exists {{ this.schema }}.{{ this.identifier }}_ts on table {{ this.schema }}.{{ this.identifier }} with properties ('TABLE_STREAM_MODE' = 'STANDARD')"
+            "create table stream if not exists {{ this.schema }}.{{ this.identifier }}_ts on table {{ this }} with properties ('TABLE_STREAM_MODE' = 'STANDARD')"
         ]
     )
 }}
@@ -20,6 +20,7 @@
 --   TABLE_STREAM_MODE: 'ALL' not supported → use 'STANDARD' (captures INSERT/UPDATE/DELETE)
 --   Snowflake post_hook: CREATE STREAM ... SHOW_INITIAL_ROWS = TRUE
 --   ClickZetta post_hook: CREATE TABLE STREAM ... TABLE_STREAM_MODE = 'STANDARD'
+--   this.database fix: dbt-clickzetta 1.6.3 — {{ this }} now renders correctly
 
 select
     c_custkey                    as customer_key,

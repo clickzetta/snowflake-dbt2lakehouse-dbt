@@ -4,7 +4,8 @@
   Snowflake: SHOW STREAMS / CREATE STREAM ... SHOW_INITIAL_ROWS = TRUE
   ClickZetta: CREATE TABLE STREAM ... WITH PROPERTIES ('TABLE_STREAM_MODE' = 'STANDARD')
 
-  Note: this.database is None in dbt-clickzetta — use schema.identifier form only.
+  Note: requires dbt-clickzetta >= 1.6.3 — this.database returned None in earlier versions.
+  With 1.6.3, {{ this }} renders correctly as schema.table.
 
   Usage: {{ get_table_stream(ref('dim_customers')) }}
 #}

@@ -94,7 +94,7 @@ These issues were discovered during actual `dbt build` against ClickZetta (not v
 | `hash()` function | Built-in multi-column hash | Not supported | `hash_combine(crc32(col1), crc32(col2), ...)` — `hash_combine_commutative` requires bigint args, use `crc32()` to convert varchar first |
 | `__change_type` as column alias | Allowed | Reserved name — error | Use `cdc_change_type` as alias; backtick-quote when reading from stream |
 | `TABLE_STREAM_MODE = 'ALL'` | Not applicable | Not supported | Use `'STANDARD'` or `'APPEND_ONLY'` |
-| `this.database` in macros | Returns database name | Returns `None` | Use `this.schema.identifier` form |
+| `this.database` in macros | Returns database name | **Fixed in dbt-clickzetta 1.6.3** — now returns workspace name. `{{ this }}` renders correctly as `schema.table`. |
 | `table(generator(rowcount=>N))` | Row generator | Not supported | Use `explode(sequence(0, N-1))` |
 | Recursive CTE (`WITH RECURSIVE`) | Supported | Not supported | Use `explode(sequence(...))` |
 | SF100 duplicate primary keys | CUSTOMER has unique C_CUSTKEY | tpch_100g SF100 has duplicate C_CUSTKEY | Add `qualify row_number() over (partition by customer_key ...) = 1` dedup |

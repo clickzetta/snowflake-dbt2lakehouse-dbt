@@ -5,7 +5,8 @@
 
 -- Migration notes:
 --   Snowflake: sequence_get_nextval() → row_number() over (...)
---              hash() → md5(concat(...))  (hash() not supported in ClickZetta)
+--              hash(col1, col2, ...) → hash_combine(crc32(col1), crc32(col2), ...)
+--              (hash_combine_commutative requires bigint; crc32 accepts varchar)
 --              transient=false, merge_exclude_columns, sysdate() → current_timestamp()
 
 {%- set scd_surrogate_key  = "customer_surrogate_key" -%}
@@ -30,15 +31,15 @@ with source_data as (
         c.customer_comment,
         c.customer_key,
         coalesce(cast(c.customer_key as varchar), '') as {{ scd_integration_key }},
-        md5(concat(
-            coalesce(c.customer_name, ''), '|',
-            coalesce(c.customer_address, ''), '|',
-            coalesce(cast(c.nation_key as varchar), ''), '|',
-            coalesce(c.customer_phone, ''), '|',
-            coalesce(cast(c.account_balance as varchar), ''), '|',
-            coalesce(c.market_segment, ''), '|',
-            coalesce(c.customer_comment, '')
-        )) as {{ scd_cdc_hash_key }},
+        hash_combine(
+            crc32(coalesce(c.customer_name, '')),
+            crc32(coalesce(c.customer_address, '')),
+            crc32(coalesce(cast(c.nation_key as varchar), '')),
+            crc32(coalesce(c.customer_phone, '')),
+            crc32(coalesce(cast(c.account_balance as varchar), '')),
+            crc32(coalesce(c.market_segment, '')),
+            crc32(coalesce(c.customer_comment, ''))
+        ) as {{ scd_cdc_hash_key }},
         case when o.order_count > 0      then 'Y' else 'N' end as has_orders_flag,
         case when o.open_order_count > 0 then 'Y' else 'N' end as has_open_orders_flag,
         o.order_count,

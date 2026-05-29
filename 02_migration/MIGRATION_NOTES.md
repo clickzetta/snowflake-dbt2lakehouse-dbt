@@ -91,7 +91,7 @@ These issues were discovered during actual `dbt build` against ClickZetta (not v
 | Issue | Snowflake behavior | ClickZetta behavior | Fix |
 |---|---|---|---|
 | `float8` type in seeds | Supported | Not supported | Use `decimal(18,6)` in seed column_types |
-| `hash()` function | Built-in | Not supported | Replace with `md5(concat(...))` |
+| `hash()` function | Built-in multi-column hash | Not supported | `hash_combine(crc32(col1), crc32(col2), ...)` — `hash_combine_commutative` requires bigint args, use `crc32()` to convert varchar first |
 | `__change_type` as column alias | Allowed | Reserved name — error | Use `cdc_change_type` as alias; backtick-quote when reading from stream |
 | `TABLE_STREAM_MODE = 'ALL'` | Not applicable | Not supported | Use `'STANDARD'` or `'APPEND_ONLY'` |
 | `this.database` in macros | Returns database name | Returns `None` | Use `this.schema.identifier` form |

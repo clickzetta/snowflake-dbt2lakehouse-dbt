@@ -4,7 +4,7 @@
 
 | Snowflake | ClickZetta | Notes |
 |---|---|---|
-| `SNOWFLAKE_SAMPLE_DATA.TPCH_SF1` | `clickzetta_sample_data.tpch_100g` | Built-in sample data, no import needed |
+| `SNOWFLAKE_SAMPLE_DATA.TPCH_SF1` | `clickzetta_sample_data.tpch_100g` | Built-in shared dataset. Use standard `database: clickzetta_sample_data` + `schema: tpch_100g` (requires dbt-clickzetta >= 1.6.8) |
 | Cybersyn Financial Economic Essentials (Marketplace) | `data/fx_rates_timeseries.csv` (seed) | Mock data covering 2020–2024, USD base, 5 currencies |
 
 ## profiles.yml

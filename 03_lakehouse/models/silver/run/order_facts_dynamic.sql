@@ -1,13 +1,13 @@
 {{ config(
     materialized='dynamic_table',
-    refresh_vc='default_ap',
+    refresh_vc='default',
     refresh_interval='1 hour',
     tags=['silver', 'run', 'real_time']
 ) }}
 
 -- Migration notes:
 --   Snowflake: snowflake_warehouse=target.warehouse, target_lag='1 hour', on_configuration_change='apply'
---   ClickZetta: refresh_vc='default_ap', refresh_interval='1 hour'
+--   ClickZetta: refresh_vc='default', refresh_interval='1 hour'
 --               on_configuration_change not supported — use ALTER DYNAMIC TABLE to change config
 --
 --   extract(dayofweek ...) → ClickZetta uses dayofweek() function or extract(dow ...)

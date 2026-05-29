@@ -70,7 +70,7 @@
 ### models/gold/dim_calendar_day.sql
 | Snowflake | ClickZetta |
 |---|---|
-| `table(generator(rowcount => N))` | Recursive CTE (`WITH RECURSIVE`) |
+| `table(generator(rowcount => N))` | `explode(sequence(0, N-1))` |
 | `to_char(date, 'YYYYMMDD')::number(8,0)` | `cast(date_format(date, 'yyyyMMdd') as int)` |
 | `last_day(date, 'YEAR'/'WEEK')` | Computed manually (`date(concat(year, '-12-31'))`, `dateadd(day, 6, week_start)`) |
 

@@ -1,6 +1,6 @@
 {{ config(
     materialized='dynamic_table',
-    refresh_vc='default_ap',
+    refresh_vc='default',
     refresh_interval='1 hour',
     alias='DIM_CURRENT_YEAR_ORDERS',
     tags=['gold', 'crawl']

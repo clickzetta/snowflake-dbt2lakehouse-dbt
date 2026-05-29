@@ -1,0 +1,50 @@
+name: "clickzetta_demo"
+version: "1.0.0"
+config-version: 2
+
+profile: "clickzetta_demo"
+
+model-paths: ["models"]
+seed-paths: ["data"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  prune_days: 2
+
+models:
+  clickzetta_demo:
+    +materialized: view
+
+    bronze:
+      +schema: bronze
+      crawl:
+        +tags: ["crawl"]
+        +materialized: table
+      run:
+        +tags: ["run"]
+        +materialized: table
+
+    silver:
+      +schema: silver
+      walk:
+        +tags: ["walk"]
+        +materialized: ephemeral
+      run:
+        +tags: ["run"]
+        +materialized: table
+
+    gold:
+      +schema: gold
+      +tags: ["gold"]
+      +materialized: table
+
+seeds:
+  clickzetta_demo:
+    +schema: raw

@@ -1,0 +1,21 @@
+clickzetta_demo:
+  target: dev
+  outputs:
+    dev:
+      type: clickzetta
+      service: cn-shanghai-alicloud.api.clickzetta.com
+      instance: <your_instance>
+      workspace: <your_workspace>
+      username: <your_username>
+      password: <your_password>
+      schema: dbt_dev
+      vcluster: default_ap
+    prod:
+      type: clickzetta
+      service: cn-shanghai-alicloud.api.clickzetta.com
+      instance: <your_instance>
+      workspace: <your_workspace>
+      username: <your_username>
+      password: <your_password>
+      schema: dbt_prod
+      vcluster: default_ap

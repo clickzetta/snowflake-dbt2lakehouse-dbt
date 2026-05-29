@@ -1,0 +1,70 @@
+version: 2
+
+sources:
+  # ClickZetta Table Stream — CDC source (replaces Snowflake Streams)
+  - name: CZ_TABLE_STREAM
+    description: "ClickZetta Table Stream for change data capture"
+    schema: "{{ target.schema }}"
+    database: "{{ target.database }}"
+    tables:
+      - name: customer_cdc_ts
+        description: "Customer CDC stream (ClickZetta Table Stream)"
+
+  # FX rates — mock seed data (replaces Cybersyn Marketplace data)
+  - name: FX_RATES
+    description: "Mock FX rates seed data (replaces Cybersyn Financial Economic Essentials)"
+    schema: "{{ target.schema }}_raw"
+    database: "{{ target.database }}"
+    tables:
+      - name: fx_rates_timeseries
+        description: "Daily USD-based exchange rates for major currencies"
+        columns:
+          - name: rate_date
+            tests: [not_null]
+          - name: base_currency
+            tests: [not_null]
+          - name: quote_currency
+            tests: [not_null]
+          - name: exchange_rate
+            tests: [not_null]
+
+  # TPC-H — ClickZetta built-in sample data (replaces SNOWFLAKE_SAMPLE_DATA.TPCH_SF1)
+  - name: TPC_H
+    description: "TPC-H benchmark dataset from ClickZetta built-in sample data"
+    schema: tpch_100g
+    database: clickzetta_sample_data
+    tables:
+      - name: NATION
+        description: "Nations reference table"
+        columns:
+          - name: N_NATIONKEY
+            tests: [not_null, unique]
+      - name: REGION
+        description: "Regions reference table"
+        columns:
+          - name: R_REGIONKEY
+            tests: [not_null, unique]
+      - name: CUSTOMER
+        description: "Customer master data"
+        columns:
+          - name: C_CUSTKEY
+            tests: [not_null, unique]
+      - name: ORDERS
+        description: "Order transactions"
+        columns:
+          - name: O_ORDERKEY
+            tests: [not_null, unique]
+      - name: LINEITEM
+        description: "Order line items"
+      - name: SUPPLIER
+        description: "Supplier master data"
+        columns:
+          - name: S_SUPPKEY
+            tests: [not_null, unique]
+      - name: PART
+        description: "Parts catalog"
+        columns:
+          - name: P_PARTKEY
+            tests: [not_null, unique]
+      - name: PARTSUPP
+        description: "Part-supplier relationships"

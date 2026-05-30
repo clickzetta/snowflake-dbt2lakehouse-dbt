@@ -83,7 +83,7 @@
 
 ### macros/get_table_stream.sql
 - Replaces Snowflake's `get_stream()` macro
-- Uses `CREATE TABLE STREAM ... WITH PROPERTIES ('TABLE_STREAM_MODE' = 'ALL')`
+- Uses `CREATE TABLE STREAM ... WITH PROPERTIES ('TABLE_STREAM_MODE' = 'STANDARD')`
 
 ## Additional Findings from Live Validation
 

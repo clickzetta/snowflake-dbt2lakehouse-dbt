@@ -17,6 +17,7 @@ clean-targets:
 
 vars:
   prune_days: 2
+  sample_limit: 10000  # 默认限制 1 万行，加速测试。跑全量数据改为 null
 
 models:
   clickzetta_demo:

@@ -5,6 +5,7 @@
 
 with source as (
     select * from {{ source('TPC_H', 'CUSTOMER') }}
+    {% if var('sample_limit', none) %}limit {{ var('sample_limit') }}{% endif %}
 ),
 
 renamed as (

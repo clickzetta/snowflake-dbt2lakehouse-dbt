@@ -9,7 +9,11 @@ clickzetta_demo:
       username: <your_username>
       password: <your_password>
       schema: dbt_dev
-      vcluster: default_ap
+      # VCluster 选择:
+      #   default      — 通用型，最小规格，首次运行约 10 分钟
+      #   default_ap   — 分析型，更大规格，Dynamic Table 刷新更快
+      #   查看可用集群: SHOW VCLUSTERS
+      vcluster: default
     prod:
       type: clickzetta
       service: cn-shanghai-alicloud.api.clickzetta.com

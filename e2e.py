@@ -101,6 +101,7 @@ def main():
     # ── Step 3: dbt build (all models + tests) ────────────────────────────
     print("\n=== Step 3: dbt build (all models, ~10 min) ===")
     print("  Note: Dynamic Tables require full refresh on first run (~4 min)")
+    print("  Note: First query after seed may be slow (~25s) due to cold cache — normal behavior")
     run_dbt(["build"])
 
     # ── Step 4: validate key models ───────────────────────────────────────

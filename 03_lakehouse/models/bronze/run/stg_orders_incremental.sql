@@ -41,6 +41,7 @@ select
     {% endif %}
 
 from {{ source('TPC_H', 'ORDERS') }}
+{% if var('sample_limit', none) %}limit {{ var('sample_limit') }}{% endif %}
 
 {% if is_incremental() %}
 where o_orderdate >= dateadd(day, -{{ var('prune_days') }}, current_date())

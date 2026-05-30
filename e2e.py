@@ -7,13 +7,16 @@ All EXPECTED values come from TPC-H SF100 (clickzetta_sample_data.tpch_100g).
 
 Usage:
     cd 03_lakehouse
-    python ../e2e.py
+    python ../e2e.py              # Full data validation
+    python ../e2e.py --sample     # Sample mode (skips large row count checks)
 
 Requirements:
     - dbt-clickzetta installed (pip install dbt-clickzetta)
     - profiles.yml configured in ~/.dbt/ or 03_lakehouse/
+    - cz-cli installed (for SQL validation queries)
 """
 
+import argparse
 import os
 import subprocess
 import sys
@@ -39,25 +42,8 @@ def run_dbt(args, check=True):
     return result.returncode == 0
 
 
-def query(sql):
-    """Run a SQL query via dbt and return the first cell value."""
-    # Use dbt run-operation to execute arbitrary SQL
-    # This avoids requiring cz-cli
-    cmd = ["dbt", "run-operation", "run_query",
-           "--args", f"{{sql: '{sql}'}}"]
-    result = subprocess.run(cmd, capture_output=True, text=True, env=DBT_ENV, cwd=PROJECT_DIR)
-    if result.returncode != 0:
-        # Fallback: try cz-cli if available
-        return _query_via_cz_cli(sql)
-    # Parse output — dbt run-operation prints results to stdout
-    # For simplicity, we use a different approach: write SQL to temp file and use dbt debug
-    # Actually, the cleanest way is to use dbt's built-in test framework
-    # But for e2e validation, let's use a simpler approach:
-    return None
-
-
 def _query_via_cz_cli(sql):
-    """Fallback: run SQL via cz-cli if available."""
+    """Run SQL via cz-cli and return the first cell value."""
     import json
     try:
         result = subprocess.run(
@@ -85,10 +71,21 @@ def check(name, actual, expected, op="=="):
     return ok
 
 
+def skip(name, reason):
+    """Skip a check and print reason."""
+    print(f"  ⊘ SKIP  {name}: {reason}")
+
+
 # ── main ───────────────────────────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser(description="E2E validation for dbt migration")
+    parser.add_argument("--sample", action="store_true", help="Sample mode: skip large row count checks")
+    args = parser.parse_args()
+
+    mode = "sample" if args.sample else "full"
     results = []
+    skipped = []
 
     # ── Step 1: dbt deps ──────────────────────────────────────────────────
     print("\n=== Step 1: dbt deps ===")
@@ -98,30 +95,40 @@ def main():
     print("\n=== Step 2: dbt seed (FX rates mock data) ===")
     run_dbt(["seed"])
 
-    # ── Step 3: dbt build (all models + tests) ────────────────────────────
-    print("\n=== Step 3: dbt build (all models, ~10 min) ===")
-    print("  Note: Dynamic Tables require full refresh on first run (~4 min)")
-    print("  Note: First query after seed may be slow (~25s) due to cold cache — normal behavior")
-    run_dbt(["build"])
+    # ── Step 3: dbt build ─────────────────────────────────────────────────
+    print(f"\n=== Step 3: dbt build ({mode} mode) ===")
+    build_args = ["build"]
+    if args.sample:
+        build_args += ["--vars", '{"sample_limit": 10000}']
+        print("  Note: Dynamic Tables require full refresh on first run (~4 min)")
+    else:
+        print("  Note: Dynamic Tables require full refresh on first run (~4 min)")
+    run_dbt(build_args)
 
     # ── Step 4: validate key models ───────────────────────────────────────
     print("\n=== Step 4: Validation ===")
     print("  (requires cz-cli for SQL queries; skip if not installed)")
 
-    # FX rates seed
+    # FX rates seed (always checked)
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_raw.fx_rates_timeseries")
     if n:
         results.append(check("fx_rates row count", int(n), 9135))
 
-    # stg_tpc_h__customers (deduped from SF100)
+    # stg_tpc_h__customers
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_bronze.stg_tpc_h__customers")
     if n:
-        results.append(check("stg_customers row count >= 15M", int(n), 15000000, ">="))
+        if args.sample:
+            results.append(check("stg_customers has data", int(n), 0, ">"))
+        else:
+            results.append(check("stg_customers row count >= 15M", int(n), 15000000, ">="))
 
     # stg_tpc_h__orders
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_bronze.stg_tpc_h__orders")
     if n:
-        results.append(check("stg_orders row count >= 150M", int(n), 150000000, ">="))
+        if args.sample:
+            results.append(check("stg_orders has data", int(n), 0, ">"))
+        else:
+            results.append(check("stg_orders row count >= 150M", int(n), 150000000, ">="))
 
     # stg_orders_incremental
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_bronze.stg_orders_incremental")
@@ -141,7 +148,10 @@ def main():
     # dim_customers
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_gold.dim_customers")
     if n:
-        results.append(check("dim_customers row count >= 15M", int(n), 15000000, ">="))
+        if args.sample:
+            results.append(check("dim_customers has data", int(n), 0, ">"))
+        else:
+            results.append(check("dim_customers row count >= 15M", int(n), 15000000, ">="))
 
     # dim_orders
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_gold.DIM_ORDERS")
@@ -158,16 +168,15 @@ def main():
     if n:
         results.append(check("customer_insights no null classification", int(n), 0))
 
-    # customer_cdc_stream — rows loaded
+    # customer_cdc_stream
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_bronze.customer_cdc_stream")
     if n:
         results.append(check("customer_cdc_stream rows > 0", int(n), 0, ">"))
 
-    # DIM_CUSTOMER_CHANGES — stream only captures changes after stream creation,
-    # so 0 rows on first run is expected. Just verify the table exists (no error).
+    # DIM_CUSTOMER_CHANGES — stream captures changes after creation, 0 on first run is expected
     n = _query_via_cz_cli(f"SELECT count(*) FROM {SCHEMA}_gold.DIM_CUSTOMER_CHANGES")
     if n is not None:
-        print(f"  ℹ INFO  DIM_CUSTOMER_CHANGES rows: {n} (0 on first run is expected — stream captures future changes only)")
+        print(f"  ℹ INFO  DIM_CUSTOMER_CHANGES rows: {n} (0 on first run is expected)")
 
     # ── Step 5: summary ───────────────────────────────────────────────────
     if results:
